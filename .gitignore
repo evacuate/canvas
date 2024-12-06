@@ -1,4 +1,3 @@
-
 *
 
 # But not these files...
@@ -12,7 +11,10 @@
 !LICENSE
 
 !*.geojson
+!.github
 !.github/*
+!.github/workflows/*
+!.github/ISSUE_TEMPLATE/*
 
 # Docker files
 !Dockerfile
