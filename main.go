@@ -250,6 +250,13 @@ func mapHandler(w http.ResponseWriter, r *http.Request) {
 
 	canvas.End()
 
+	format := r.URL.Query().Get("format")
+	if format == "svg" {
+		w.Header().Set("Content-Type", "image/svg+xml")
+		w.Write(buf.Bytes())
+		return
+	}
+
 	// Convert SVG to PNG
 	pngData, err := svgToPNG(buf.Bytes(), int(CANVAS_WIDTH), int(CANVAS_HEIGHT))
 	if err != nil {
