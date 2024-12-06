@@ -51,6 +51,49 @@ func intensityToColor(scale int) string {
 	}
 }
 
+// Function to calculate the drawing range
+func calculateBounds(fc *geojson.FeatureCollection, scaleMap map[int]int) (minLon, minLat, maxLon, maxLat float64) {
+    minLon = 180.0
+    minLat = 90.0
+    maxLon = -180.0
+    maxLat = -90.0
+
+    for _, feature := range fc.Features {
+        // Skip if the scale is 0 (transparent prefectures are not calculated)
+        id := int(feature.Properties["id"].(float64))
+        if scaleMap[id] == 0 {
+            continue
+        }
+
+        // Calculate the range from the coordinates of the polygon
+        switch feature.Geometry.Type {
+        case "Polygon":
+            for _, ring := range feature.Geometry.Polygon {
+                for _, coord := range ring {
+                    lon, lat := coord[0], coord[1]
+                    minLon = min(minLon, lon)
+                    minLat = min(minLat, lat)
+                    maxLon = max(maxLon, lon)
+                    maxLat = max(maxLat, lat)
+                }
+            }
+        case "MultiPolygon":
+            for _, polygon := range feature.Geometry.MultiPolygon {
+                for _, ring := range polygon {
+                    for _, coord := range ring {
+                        lon, lat := coord[0], coord[1]
+                        minLon = min(minLon, lon)
+                        minLat = min(minLat, lat)
+                        maxLon = max(maxLon, lon)
+                        maxLat = max(maxLat, lat)
+                    }
+                }
+            }
+        }
+    }
+    return
+}
+
 // Function to convert SVG data to PNG
 func svgToPNG(svgData []byte, width, height int) ([]byte, error) {
 	icon, err := oksvg.ReadIconStream(bytes.NewReader(svgData))
@@ -105,20 +148,6 @@ func mapHandler(w http.ResponseWriter, r *http.Request) {
 		CANVAS_HEIGHT = 720.0
 	)
 
-	// Map display area
-	const (
-		MAP_WIDTH  = 500.0
-		MAP_HEIGHT = 550.0
-	)
-
-	// Range of Japan
-	const (
-		LON_MIN = 122.0
-		LON_MAX = 146.0
-		LAT_MIN = 24.0
-		LAT_MAX = 46.0
-	)
-
 	data, err := os.ReadFile("japan.geojson")
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to read geojson: %v", err), http.StatusInternalServerError)
@@ -131,17 +160,33 @@ func mapHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	funcToScreen := func(lon, lat float64) (x, y float64) {
-		marginX := (CANVAS_WIDTH - MAP_WIDTH) / 2
-		marginY := (CANVAS_HEIGHT - MAP_HEIGHT) / 2
+	// Calculate the valid area
+	minLon, minLat, maxLon, maxLat := calculateBounds(fc, scaleMap)
 
-		lonScale := MAP_WIDTH / (LON_MAX - LON_MIN)
-		latScale := MAP_HEIGHT / (LAT_MAX - LAT_MIN)
+    funcToScreen := func(lon, lat float64) (x, y float64) {
+		// Calculate the margin (10% of the screen)
+        margin := 0.1
+        effectiveWidth := CANVAS_WIDTH * (1.0 - 2*margin)
+        effectiveHeight := CANVAS_HEIGHT * (1.0 - 2*margin)
 
-		x = (lon - LON_MIN) * lonScale + marginX
-		y = (LAT_MAX - lat) * latScale + marginY
-		return
-	}
+        // Calculate the magnification rate while maintaining the aspect ratio
+        lonSpan := maxLon - minLon
+        latSpan := maxLat - minLat
+        scaleX := effectiveWidth / lonSpan
+        scaleY := effectiveHeight / latSpan
+        scale := min(scaleX, scaleY)
+
+        // Calculate the center of the display area
+        centerLon := (maxLon + minLon) / 2
+        centerLat := (maxLat + minLat) / 2
+        centerX := CANVAS_WIDTH / 2
+        centerY := CANVAS_HEIGHT / 2
+
+        // Coordinate conversion
+        x = (lon - centerLon) * scale + centerX
+        y = (centerLat - lat) * scale + centerY
+        return
+    }
 
 	buf := new(bytes.Buffer)
 	canvas := svg.New(buf)
@@ -214,6 +259,20 @@ func mapHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "image/png")
 	w.Write(pngData)
+}
+
+func min(a, b float64) float64 {
+    if a < b {
+        return a
+    }
+    return b
+}
+
+func max(a, b float64) float64 {
+    if a > b {
+        return a
+    }
+    return b
 }
 
 func main() {
