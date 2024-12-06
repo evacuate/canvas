@@ -12,6 +12,7 @@
 !LICENSE
 
 !*.geojson
+!.github/*.md
 
 # Docker files
 !Dockerfile
