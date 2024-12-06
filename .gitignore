@@ -12,3 +12,7 @@
 !LICENSE
 
 !*.geojson
+
+# Docker files
+!Dockerfile
+!compose.yml
