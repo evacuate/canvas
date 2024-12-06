@@ -1,4 +1,4 @@
-module images
+module canvas
 
 go 1.23.2
 
