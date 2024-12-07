@@ -128,29 +128,30 @@ func svgToPNG(svgData []byte, width, height int, footerText string) ([]byte, err
     // SVG rendering
     icon.Draw(raster, 1.0)
 
-    // Draw footer text (if present)
-    if footerText != "" {
-        // Load the font
-        f, err := loadFont()
-		if err != nil {
-			return nil, fmt.Errorf("failed to load font: %w", err)
-		}
-		
-		// Create a new context
-		c := freetype.NewContext()
-		c.SetDPI(72)
-		c.SetFont(f)
-		c.SetFontSize(20)
-		c.SetClip(rgba.Bounds())
-		c.SetDst(rgba)
-		c.SetSrc(image.White)
+	if footerText == "" {
+		footerText = "Code available under the MIT License (GitHub: evacuate)."
+	}
 
-		// Draw the text
-		pt := freetype.Pt(10, height-20)
-		_, err = c.DrawString(footerText, pt)
-		if err != nil {
-			return nil, fmt.Errorf("テキストの描画に失敗: %w", err)
-		}
+	// Load the font
+	f, err := loadFont()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load font: %w", err)
+	}
+	
+	// Create a new context
+	c := freetype.NewContext()
+	c.SetDPI(72)
+	c.SetFont(f)
+	c.SetFontSize(14)
+	c.SetClip(rgba.Bounds())
+	c.SetDst(rgba)
+	c.SetSrc(image.White)
+
+	// Draw the text
+	pt := freetype.Pt(10, height-14)
+	_, err = c.DrawString(footerText, pt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to draw text: %w", err)
 	}
 
 	var buf bytes.Buffer
