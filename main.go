@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"image"
 	"image/png"
-	"io/ioutil"
 	"log"
 	"math"
 	"net/http"
@@ -56,7 +55,7 @@ func intensityToColor(scale int) string {
 }
 
 func loadFont() (*truetype.Font, error) {
-    fontBytes, err := ioutil.ReadFile("./fonts/roboto.ttf")
+    fontBytes, err := os.ReadFile("./fonts/roboto.ttf")
     if err != nil {
         return nil, err
     }
