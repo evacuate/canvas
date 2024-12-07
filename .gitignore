@@ -16,6 +16,10 @@
 !.github/workflows/*
 !.github/ISSUE_TEMPLATE/*
 
+# Docs
+!docs
+!docs/*
+
 # Fonts
 !fonts
 !fonts/*.ttf
