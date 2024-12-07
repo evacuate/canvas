@@ -329,7 +329,7 @@ func mapHandler(w http.ResponseWriter, r *http.Request) {
 			finalPath += p + " "
 		}
 
-		style := fmt.Sprintf("fill:%s;stroke:#a1a1aa;stroke-width:0.2;fill-opacity:0.8", fillColor)
+		style := fmt.Sprintf("fill:%s;stroke:#a1a1aa;stroke-width:0.4;fill-opacity:0.8", fillColor)
 		canvas.Path(finalPath, style)
 	}
 
