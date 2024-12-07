@@ -123,7 +123,7 @@ func calculateCenter(coords [][]float64) (float64, float64) {
 }
 
 // Function to convert SVG data to PNG
-func svgToPNG(svgData []byte, width, height int, footerText string, features []*geojson.Feature, scaleMap map[int]int, funcToScreen func(float64, float64) (float64, float64)) ([]byte, error) {
+func svgToPNG(svgData []byte, width, height int, footerText string, showScale bool, features []*geojson.Feature, scaleMap map[int]int, funcToScreen func(float64, float64) (float64, float64)) ([]byte, error) {
     // Loading SVG data
     icon, err := oksvg.ReadIconStream(bytes.NewReader(svgData))
     if err != nil {
@@ -160,34 +160,35 @@ func svgToPNG(svgData []byte, width, height int, footerText string, features []*
     c.SetDst(rgba)
 	c.SetSrc(image.NewUniform(color.RGBA{0xfa, 0xfa, 0xfa, 0xff}))
 
-    // Scale values are drawn at the center of each prefecture
-    for _, feature := range features {
-        id := int(feature.Properties["id"].(float64))
-        scale, exists := scaleMap[id]
-        if !exists || scale == 0 {
-            continue
-        }
+	if showScale {
+		// Scale values are drawn at the center of each prefecture
+		for _, feature := range features {
+			id := int(feature.Properties["id"].(float64))
+			scale, exists := scaleMap[id]
+			if !exists || scale == 0 {
+				continue
+			}
 
-        var centerLon, centerLat float64
-        switch feature.Geometry.Type {
-        case "Polygon":
-            centerLon, centerLat = calculateCenter(feature.Geometry.Polygon[0])
-        case "MultiPolygon":
-            // Use the center of the first polygon
-            centerLon, centerLat = calculateCenter(feature.Geometry.MultiPolygon[0][0])
-        }
+			var centerLon, centerLat float64
+			switch feature.Geometry.Type {
+			case "Polygon":
+				centerLon, centerLat = calculateCenter(feature.Geometry.Polygon[0])
+			case "MultiPolygon":
+				// Use the center of the first polygon
+				centerLon, centerLat = calculateCenter(feature.Geometry.MultiPolygon[0][0])
+			}
 
-        // Converted to screen coordinates
-        x, y := funcToScreen(centerLon, centerLat)
-        pt := freetype.Pt(int(x)-5, int(y)+5)
-        _, err = c.DrawString(fmt.Sprintf("%d", scale), pt)
-        if err != nil {
-            return nil, fmt.Errorf("failed to draw scale value: %w", err)
-        }
-    }
+			// Converted to screen coordinates
+			x, y := funcToScreen(centerLon, centerLat)
+			pt := freetype.Pt(int(x)-5, int(y)+5)
+			_, err = c.DrawString(fmt.Sprintf("%d", scale), pt)
+			if err != nil {
+				return nil, fmt.Errorf("failed to draw scale value: %w", err)
+			}
+		}
+	}
+	
 
-	c.SetFontSize(14) // Font size for footer
-	c.SetSrc(image.NewUniform(color.RGBA{0xfa, 0xfa, 0xfa, 0xff}))
 	pt := freetype.Pt(10, height-14)
 	_, err = c.DrawString(footerText, pt)
 	if err != nil {
@@ -333,6 +334,7 @@ func mapHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	footerText := r.URL.Query().Get("footer")
+	showScale := r.URL.Query().Get("scale_text") == "true"
 
 	canvas.End()
 
@@ -344,7 +346,7 @@ func mapHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Convert SVG to PNG
-	pngData, err := svgToPNG(buf.Bytes(), int(CANVAS_WIDTH), int(CANVAS_HEIGHT), footerText, fc.Features, scaleMap, funcToScreen)
+	pngData, err := svgToPNG(buf.Bytes(), int(CANVAS_WIDTH), int(CANVAS_HEIGHT), footerText, showScale, fc.Features, scaleMap, funcToScreen)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to convert svg to png: %v", err), http.StatusInternalServerError)
 		return
