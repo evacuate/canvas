@@ -4,8 +4,8 @@ FROM golang:1.23
 # Set the working directory to /app
 WORKDIR /app
 
-# Copy the current directory contents into the container at /app
-COPY go.mod go.sum main.go japan.geojson ./
+# Copy the rest of the application code to the container
+COPY . .
 
 RUN go mod download && \
   go build -o main /app/main.go
