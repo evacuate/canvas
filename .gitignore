@@ -20,6 +20,10 @@
 !fonts
 !fonts/*.ttf
 
+# VSCode
+!.vscode
+!.vscode/*
+
 # Docker files
 !Dockerfile
 !compose.yml
