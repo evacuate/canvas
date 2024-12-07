@@ -7,6 +7,7 @@ import (
 	"image"
 	"image/png"
 	"log"
+	"math"
 	"net/http"
 	"os"
 
@@ -163,30 +164,32 @@ func mapHandler(w http.ResponseWriter, r *http.Request) {
 	// Calculate the valid area
 	minLon, minLat, maxLon, maxLat := calculateBounds(fc, scaleMap)
 
-    funcToScreen := func(lon, lat float64) (x, y float64) {
-		// Calculate the margin (10% of the screen)
-        margin := 0.1
-        effectiveWidth := CANVAS_WIDTH * (1.0 - 2*margin)
-        effectiveHeight := CANVAS_HEIGHT * (1.0 - 2*margin)
-
-        // Calculate the magnification rate while maintaining the aspect ratio
-        lonSpan := maxLon - minLon
-        latSpan := maxLat - minLat
-        scaleX := effectiveWidth / lonSpan
-        scaleY := effectiveHeight / latSpan
-        scale := min(scaleX, scaleY)
-
-        // Calculate the center of the display area
-        centerLon := (maxLon + minLon) / 2
-        centerLat := (maxLat + minLat) / 2
-        centerX := CANVAS_WIDTH / 2
-        centerY := CANVAS_HEIGHT / 2
-
-        // Coordinate conversion
-        x = (lon - centerLon) * scale + centerX
-        y = (centerLat - lat) * scale + centerY
-        return
-    }
+	funcToScreen := func(lon, lat float64) (x, y float64) {
+		// Calculate the effective drawing area
+		margin := 0.1
+		effectiveWidth := CANVAS_WIDTH * (1.0 - 2*margin)
+		effectiveHeight := CANVAS_HEIGHT * (1.0 - 2*margin)
+	
+		// Calculate center coordinates only once
+		centerLat := (maxLat + minLat) / 2
+		centerLon := (maxLon + minLon) / 2
+		centerX := CANVAS_WIDTH / 2
+		centerY := CANVAS_HEIGHT / 2
+	
+		// Calculate the correction factor for longitude distance by latitude
+		lonCorrection := math.Cos(centerLat * math.Pi / 180.0)
+	
+		lonSpan := (maxLon - minLon) * lonCorrection  // Correct longitude range
+		latSpan := maxLat - minLat
+		
+		scaleX := effectiveWidth / lonSpan
+		scaleY := effectiveHeight / latSpan
+		scale := min(scaleX, scaleY)
+	
+		x = ((lon - centerLon) * lonCorrection) * scale + centerX
+		y = (centerLat - lat) * scale + centerY
+		return
+	}
 
 	buf := new(bytes.Buffer)
 	canvas := svg.New(buf)
