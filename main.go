@@ -6,12 +6,15 @@ import (
 	"fmt"
 	"image"
 	"image/png"
+	"io/ioutil"
 	"log"
 	"math"
 	"net/http"
 	"os"
 
 	svg "github.com/ajstarks/svgo"
+	"github.com/golang/freetype"
+	"github.com/golang/freetype/truetype"
 	geojson "github.com/paulmach/go.geojson"
 	"github.com/srwiley/oksvg"
 	"github.com/srwiley/rasterx"
@@ -50,6 +53,18 @@ func intensityToColor(scale int) string {
 		}
 		return "#27272a"
 	}
+}
+
+func loadFont() (*truetype.Font, error) {
+    fontBytes, err := ioutil.ReadFile("./fonts/roboto.ttf")
+    if err != nil {
+        return nil, err
+    }
+    f, err := freetype.ParseFont(fontBytes)
+    if err != nil {
+        return nil, err
+    }
+    return f, nil
 }
 
 // Function to calculate the drawing range
@@ -96,22 +111,48 @@ func calculateBounds(fc *geojson.FeatureCollection, scaleMap map[int]int) (minLo
 }
 
 // Function to convert SVG data to PNG
-func svgToPNG(svgData []byte, width, height int) ([]byte, error) {
-	icon, err := oksvg.ReadIconStream(bytes.NewReader(svgData))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse svg: %w", err)
+func svgToPNG(svgData []byte, width, height int, footerText string) ([]byte, error) {
+    // Loading SVG data
+    icon, err := oksvg.ReadIconStream(bytes.NewReader(svgData))
+    if err != nil {
+        return nil, fmt.Errorf("failed to read icon stream: %w", err)
+    }
+
+    // Drawing Area Settings
+    icon.SetTarget(0, 0, float64(width), float64(height))
+
+    // Creating RGBA images for drawing
+    rgba := image.NewRGBA(image.Rect(0, 0, width, height))
+    scanner := rasterx.NewScannerGV(width, height, rgba, rgba.Bounds())
+    raster := rasterx.NewDasher(width, height, scanner)
+
+    // SVG rendering
+    icon.Draw(raster, 1.0)
+
+    // Draw footer text (if present)
+    if footerText != "" {
+        // Load the font
+        f, err := loadFont()
+		if err != nil {
+			return nil, fmt.Errorf("failed to load font: %w", err)
+		}
+		
+		// Create a new context
+		c := freetype.NewContext()
+		c.SetDPI(72)
+		c.SetFont(f)
+		c.SetFontSize(20)
+		c.SetClip(rgba.Bounds())
+		c.SetDst(rgba)
+		c.SetSrc(image.White)
+
+		// Draw the text
+		pt := freetype.Pt(10, height-20)
+		_, err = c.DrawString(footerText, pt)
+		if err != nil {
+			return nil, fmt.Errorf("テキストの描画に失敗: %w", err)
+		}
 	}
-
-	// et the target area
-	icon.SetTarget(0, 0, float64(width), float64(height))
-
-	// Create an image for drawing
-	rgba := image.NewRGBA(image.Rect(0, 0, width, height))
-	scanner := rasterx.NewScannerGV(width, height, rgba, rgba.Bounds())
-	raster := rasterx.NewDasher(width, height, scanner)
-
-	// Draw the SVG
-	icon.Draw(raster, 1.0)
 
 	var buf bytes.Buffer
 	if err := png.Encode(&buf, rgba); err != nil {
@@ -251,6 +292,8 @@ func mapHandler(w http.ResponseWriter, r *http.Request) {
 		canvas.Path(finalPath, style)
 	}
 
+	footerText := r.URL.Query().Get("footer")
+
 	canvas.End()
 
 	format := r.URL.Query().Get("format")
@@ -261,7 +304,7 @@ func mapHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Convert SVG to PNG
-	pngData, err := svgToPNG(buf.Bytes(), int(CANVAS_WIDTH), int(CANVAS_HEIGHT))
+	pngData, err := svgToPNG(buf.Bytes(), int(CANVAS_WIDTH), int(CANVAS_HEIGHT), footerText)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to convert svg to png: %v", err), http.StatusInternalServerError)
 		return
