@@ -21,8 +21,8 @@ import (
 )
 
 type IntensityQuery struct {
-    ID       int `json:"id"`
-    Scale    int `json:"scale"`
+	ID    int `json:"id"`
+	Scale int `json:"scale"`
 }
 
 // Function to convert intensity scale to color
@@ -65,7 +65,7 @@ func loadFont(weight int) (*truetype.Font, error) {
 	default:
 		fontPath = "./fonts/roboto-regular.ttf" // default to regular
 	}
-	
+
 	fontBytes, err := os.ReadFile(fontPath)
 	if err != nil {
 		return nil, err
@@ -79,77 +79,77 @@ func loadFont(weight int) (*truetype.Font, error) {
 
 // Function to calculate the drawing range
 func calculateBounds(fc *geojson.FeatureCollection, scaleMap map[int]int) (minLon, minLat, maxLon, maxLat float64) {
-    minLon = 180.0
-    minLat = 90.0
-    maxLon = -180.0
-    maxLat = -90.0
+	minLon = 180.0
+	minLat = 90.0
+	maxLon = -180.0
+	maxLat = -90.0
 
-    for _, feature := range fc.Features {
-        // Skip if the scale is 0 (transparent prefectures are not calculated)
-        id := int(feature.Properties["id"].(float64))
-        if scaleMap[id] == 0 {
-            continue
-        }
+	for _, feature := range fc.Features {
+		// Skip if the scale is 0 (transparent prefectures are not calculated)
+		id := int(feature.Properties["id"].(float64))
+		if scaleMap[id] == 0 {
+			continue
+		}
 
-        // Calculate the range from the coordinates of the polygon
-        switch feature.Geometry.Type {
-        case "Polygon":
-            for _, ring := range feature.Geometry.Polygon {
-                for _, coord := range ring {
-                    lon, lat := coord[0], coord[1]
-                    minLon = min(minLon, lon)
-                    minLat = min(minLat, lat)
-                    maxLon = max(maxLon, lon)
-                    maxLat = max(maxLat, lat)
-                }
-            }
-        case "MultiPolygon":
-            for _, polygon := range feature.Geometry.MultiPolygon {
-                for _, ring := range polygon {
-                    for _, coord := range ring {
-                        lon, lat := coord[0], coord[1]
-                        minLon = min(minLon, lon)
-                        minLat = min(minLat, lat)
-                        maxLon = max(maxLon, lon)
-                        maxLat = max(maxLat, lat)
-                    }
-                }
-            }
-        }
-    }
-    return
+		// Calculate the range from the coordinates of the polygon
+		switch feature.Geometry.Type {
+		case "Polygon":
+			for _, ring := range feature.Geometry.Polygon {
+				for _, coord := range ring {
+					lon, lat := coord[0], coord[1]
+					minLon = min(minLon, lon)
+					minLat = min(minLat, lat)
+					maxLon = max(maxLon, lon)
+					maxLat = max(maxLat, lat)
+				}
+			}
+		case "MultiPolygon":
+			for _, polygon := range feature.Geometry.MultiPolygon {
+				for _, ring := range polygon {
+					for _, coord := range ring {
+						lon, lat := coord[0], coord[1]
+						minLon = min(minLon, lon)
+						minLat = min(minLat, lat)
+						maxLon = max(maxLon, lon)
+						maxLat = max(maxLat, lat)
+					}
+				}
+			}
+		}
+	}
+	return
 }
 
 func calculateCenter(coords [][]float64) (float64, float64) {
-    var sumLon, sumLat float64
-    count := len(coords)
-    
-    for _, coord := range coords {
-        sumLon += coord[0]
-        sumLat += coord[1]
-    }
-    
-    return sumLon/float64(count), sumLat/float64(count)
+	var sumLon, sumLat float64
+	count := len(coords)
+
+	for _, coord := range coords {
+		sumLon += coord[0]
+		sumLat += coord[1]
+	}
+
+	return sumLon / float64(count), sumLat / float64(count)
 }
 
 // Function to convert SVG data to PNG
 func svgToPNG(svgData []byte, width, height int, footerText string, showScale bool, features []*geojson.Feature, scaleMap map[int]int, funcToScreen func(float64, float64) (float64, float64)) ([]byte, error) {
-    // Loading SVG data
-    icon, err := oksvg.ReadIconStream(bytes.NewReader(svgData))
-    if err != nil {
-        return nil, fmt.Errorf("failed to read icon stream: %w", err)
-    }
+	// Loading SVG data
+	icon, err := oksvg.ReadIconStream(bytes.NewReader(svgData))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read icon stream: %w", err)
+	}
 
-    // Drawing Area Settings
-    icon.SetTarget(0, 0, float64(width), float64(height))
+	// Drawing Area Settings
+	icon.SetTarget(0, 0, float64(width), float64(height))
 
-    // Creating RGBA images for drawing
-    rgba := image.NewRGBA(image.Rect(0, 0, width, height))
-    scanner := rasterx.NewScannerGV(width, height, rgba, rgba.Bounds())
-    raster := rasterx.NewDasher(width, height, scanner)
+	// Creating RGBA images for drawing
+	rgba := image.NewRGBA(image.Rect(0, 0, width, height))
+	scanner := rasterx.NewScannerGV(width, height, rgba, rgba.Bounds())
+	raster := rasterx.NewDasher(width, height, scanner)
 
-    // SVG rendering
-    icon.Draw(raster, 1.0)
+	// SVG rendering
+	icon.Draw(raster, 1.0)
 
 	if footerText == "" {
 		footerText = "Code available under the MIT License (GitHub: evacuate)."
@@ -160,7 +160,7 @@ func svgToPNG(svgData []byte, width, height int, footerText string, showScale bo
 	if err != nil {
 		return nil, fmt.Errorf("failed to load font: %w", err)
 	}
-	
+
 	// Context for scale value text drawing
 	c := freetype.NewContext()
 	c.SetDPI(72)
@@ -197,7 +197,6 @@ func svgToPNG(svgData []byte, width, height int, footerText string, showScale bo
 			}
 		}
 	}
-	
 
 	pt := freetype.Pt(10, height-14)
 	_, err = c.DrawString(footerText, pt)
@@ -214,27 +213,27 @@ func svgToPNG(svgData []byte, width, height int, footerText string, showScale bo
 
 func mapHandler(w http.ResponseWriter, r *http.Request) {
 	scaleData := r.URL.Query().Get("scale")
-    if scaleData == "" {
-        http.Error(w, "scale parameter is required", http.StatusBadRequest)
-        return
-    }
+	if scaleData == "" {
+		http.Error(w, "scale parameter is required", http.StatusBadRequest)
+		return
+	}
 
 	var intensities []IntensityQuery
-    if err := json.Unmarshal([]byte(scaleData), &intensities); err != nil {
-        http.Error(w, fmt.Sprintf("Invalid scale data format: %v", err), http.StatusBadRequest)
-        return
-    }
+	if err := json.Unmarshal([]byte(scaleData), &intensities); err != nil {
+		http.Error(w, fmt.Sprintf("Invalid scale data format: %v", err), http.StatusBadRequest)
+		return
+	}
 
 	scaleMap := make(map[int]int)
-    for _, intensity := range intensities {
-        // Check the intensity value
-        if intensity.Scale < 0 || intensity.Scale > 7 {
-            http.Error(w, fmt.Sprintf("Invalid scale value for ID %d: %d", 
-                intensity.ID, intensity.Scale), http.StatusBadRequest)
-            return
-        }
-        scaleMap[intensity.ID] = intensity.Scale
-    }
+	for _, intensity := range intensities {
+		// Check the intensity value
+		if intensity.Scale < 0 || intensity.Scale > 7 {
+			http.Error(w, fmt.Sprintf("Invalid scale value for ID %d: %d",
+				intensity.ID, intensity.Scale), http.StatusBadRequest)
+			return
+		}
+		scaleMap[intensity.ID] = intensity.Scale
+	}
 
 	const (
 		CANVAS_WIDTH  = 1280.0
@@ -261,25 +260,25 @@ func mapHandler(w http.ResponseWriter, r *http.Request) {
 		margin := 0.1
 		effectiveWidth := CANVAS_WIDTH * (1.0 - 2*margin)
 		effectiveHeight := CANVAS_HEIGHT * (1.0 - 2*margin)
-	
+
 		// Calculate center coordinates only once
 		centerLat := (maxLat + minLat) / 2
 		centerLon := (maxLon + minLon) / 2
 		centerX := CANVAS_WIDTH / 2
 		centerY := CANVAS_HEIGHT / 2
-	
+
 		// Calculate the correction factor for longitude distance by latitude
 		lonCorrection := math.Cos(centerLat * math.Pi / 180.0)
-	
-		lonSpan := (maxLon - minLon) * lonCorrection  // Correct longitude range
+
+		lonSpan := (maxLon - minLon) * lonCorrection // Correct longitude range
 		latSpan := maxLat - minLat
-		
+
 		scaleX := effectiveWidth / lonSpan
 		scaleY := effectiveHeight / latSpan
 		scale := min(scaleX, scaleY)
-	
-		x = ((lon - centerLon) * lonCorrection) * scale + centerX
-		y = (centerLat - lat) * scale + centerY
+
+		x = ((lon-centerLon)*lonCorrection)*scale + centerX
+		y = (centerLat-lat)*scale + centerY
 		return
 	}
 
@@ -288,18 +287,18 @@ func mapHandler(w http.ResponseWriter, r *http.Request) {
 	canvas.Start(int(CANVAS_WIDTH), int(CANVAS_HEIGHT))
 	canvas.Rect(0, 0, int(CANVAS_WIDTH), int(CANVAS_HEIGHT), "fill:#18181b")
 
-    for _, feature := range fc.Features {
-        id, ok := feature.Properties["id"].(float64)
-        if !ok {
-            http.Error(w, "Invalid ID format in GeoJSON", http.StatusInternalServerError)
-            return
-        }
+	for _, feature := range fc.Features {
+		id, ok := feature.Properties["id"].(float64)
+		if !ok {
+			http.Error(w, "Invalid ID format in GeoJSON", http.StatusInternalServerError)
+			return
+		}
 
-        scaleValue := 0
-        if val, ok := scaleMap[int(id)]; ok {
-            scaleValue = val
-        }
-        fillColor := intensityToColor(scaleValue)
+		scaleValue := 0
+		if val, ok := scaleMap[int(id)]; ok {
+			scaleValue = val
+		}
+		fillColor := intensityToColor(scaleValue)
 
 		var paths []string
 		if feature.Geometry.Type == "Polygon" {
@@ -367,17 +366,17 @@ func mapHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func min(a, b float64) float64 {
-    if a < b {
-        return a
-    }
-    return b
+	if a < b {
+		return a
+	}
+	return b
 }
 
 func max(a, b float64) float64 {
-    if a > b {
-        return a
-    }
-    return b
+	if a > b {
+		return a
+	}
+	return b
 }
 
 func main() {
