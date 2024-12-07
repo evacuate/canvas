@@ -133,7 +133,7 @@ func calculateCenter(coords [][]float64) (float64, float64) {
 }
 
 // Function to convert SVG data to PNG
-func svgToPNG(svgData []byte, width, height int, footerText string, showScale bool, features []*geojson.Feature, scaleMap map[int]int, funcToScreen func(float64, float64) (float64, float64)) ([]byte, error) {
+func svgToPNG(svgData []byte, width, height int, footerText string, showScale bool, multiplier float64, features []*geojson.Feature, scaleMap map[int]int, funcToScreen func(float64, float64) (float64, float64)) ([]byte, error) {
 	// Loading SVG data
 	icon, err := oksvg.ReadIconStream(bytes.NewReader(svgData))
 	if err != nil {
@@ -165,7 +165,7 @@ func svgToPNG(svgData []byte, width, height int, footerText string, showScale bo
 	c := freetype.NewContext()
 	c.SetDPI(72)
 	c.SetFont(f)
-	c.SetFontSize(14) // Font size for scale values
+	c.SetFontSize(14 * multiplier)
 	c.SetClip(rgba.Bounds())
 	c.SetDst(rgba)
 	c.SetSrc(image.NewUniform(color.RGBA{0xfa, 0xfa, 0xfa, 0xff}))
@@ -198,7 +198,7 @@ func svgToPNG(svgData []byte, width, height int, footerText string, showScale bo
 		}
 	}
 
-	pt := freetype.Pt(10, height-14)
+	pt := freetype.Pt(int(10*multiplier), height-int(14*multiplier))
 	_, err = c.DrawString(footerText, pt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to draw footer text: %w", err)
@@ -235,10 +235,27 @@ func mapHandler(w http.ResponseWriter, r *http.Request) {
 		scaleMap[intensity.ID] = intensity.Scale
 	}
 
+	size := r.URL.Query().Get("size")
+	var multiplier float64 = 1.0
+
+	switch size {
+	case "1":
+		multiplier = 1.0 // 1280x720
+	case "2":
+		multiplier = 2.0 // 2560x1440
+	case "3":
+		multiplier = 4.0 // 5120x2880
+	default:
+		multiplier = 1.0
+	}
+
 	const (
-		CANVAS_WIDTH  = 1280.0
-		CANVAS_HEIGHT = 720.0
+		BASE_WIDTH  = 1280.0
+		BASE_HEIGHT = 720.0
 	)
+
+	CANVAS_WIDTH := BASE_WIDTH * multiplier
+	CANVAS_HEIGHT := BASE_HEIGHT * multiplier
 
 	data, err := os.ReadFile("japan.geojson")
 	if err != nil {
@@ -338,7 +355,9 @@ func mapHandler(w http.ResponseWriter, r *http.Request) {
 			finalPath += p + " "
 		}
 
-		style := fmt.Sprintf("fill:%s;stroke:#a1a1aa;stroke-width:0.4;fill-opacity:0.8", fillColor)
+		strokeWidth := 0.4 * multiplier
+		style := fmt.Sprintf("fill:%s;stroke:#a1a1aa;stroke-width:%.1f;fill-opacity:0.8",
+			fillColor, strokeWidth)
 		canvas.Path(finalPath, style)
 	}
 
@@ -348,7 +367,7 @@ func mapHandler(w http.ResponseWriter, r *http.Request) {
 	canvas.End()
 
 	// Convert SVG to PNG
-	pngData, err := svgToPNG(buf.Bytes(), int(CANVAS_WIDTH), int(CANVAS_HEIGHT), footerText, showScale, fc.Features, scaleMap, funcToScreen)
+	pngData, err := svgToPNG(buf.Bytes(), int(CANVAS_WIDTH), int(CANVAS_HEIGHT), footerText, showScale, float64(multiplier), fc.Features, scaleMap, funcToScreen)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to convert svg to png: %v", err), http.StatusInternalServerError)
 		return
