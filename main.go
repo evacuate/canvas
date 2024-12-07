@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"image"
+	"image/color"
 	"image/png"
 	"log"
 	"math"
@@ -145,7 +146,7 @@ func svgToPNG(svgData []byte, width, height int, footerText string) ([]byte, err
 	c.SetFontSize(14)
 	c.SetClip(rgba.Bounds())
 	c.SetDst(rgba)
-	c.SetSrc(image.White)
+	c.SetSrc(image.NewUniform(color.RGBA{0xfa, 0xfa, 0xfa, 0xff}))
 
 	// Draw the text
 	pt := freetype.Pt(10, height-14)
