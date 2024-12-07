@@ -16,6 +16,10 @@
 !.github/workflows/*
 !.github/ISSUE_TEMPLATE/*
 
+# Fonts
+!fonts
+!fonts/*.ttf
+
 # Docker files
 !Dockerfile
 !compose.yml
