@@ -55,16 +55,26 @@ func intensityToColor(scale int) string {
 	}
 }
 
-func loadFont() (*truetype.Font, error) {
-    fontBytes, err := os.ReadFile("./fonts/roboto.ttf")
-    if err != nil {
-        return nil, err
-    }
-    f, err := freetype.ParseFont(fontBytes)
-    if err != nil {
-        return nil, err
-    }
-    return f, nil
+func loadFont(weight int) (*truetype.Font, error) {
+	var fontPath string
+	switch weight {
+	case 400:
+		fontPath = "./fonts/roboto-regular.ttf"
+	case 500:
+		fontPath = "./fonts/roboto-medium.ttf"
+	default:
+		fontPath = "./fonts/roboto-regular.ttf" // default to regular
+	}
+	
+	fontBytes, err := os.ReadFile(fontPath)
+	if err != nil {
+		return nil, err
+	}
+	f, err := freetype.ParseFont(fontBytes)
+	if err != nil {
+		return nil, err
+	}
+	return f, nil
 }
 
 // Function to calculate the drawing range
@@ -146,18 +156,18 @@ func svgToPNG(svgData []byte, width, height int, footerText string, showScale bo
 	}
 
 	// Load the font
-	f, err := loadFont()
+	f, err := loadFont(400)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load font: %w", err)
 	}
 	
-    // Context for scale value text drawing
-    c := freetype.NewContext()
-    c.SetDPI(72)
-    c.SetFont(f)
-    c.SetFontSize(14) // Font size for scale values
-    c.SetClip(rgba.Bounds())
-    c.SetDst(rgba)
+	// Context for scale value text drawing
+	c := freetype.NewContext()
+	c.SetDPI(72)
+	c.SetFont(f)
+	c.SetFontSize(14) // Font size for scale values
+	c.SetClip(rgba.Bounds())
+	c.SetDst(rgba)
 	c.SetSrc(image.NewUniform(color.RGBA{0xfa, 0xfa, 0xfa, 0xff}))
 
 	if showScale {
