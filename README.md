@@ -11,7 +11,7 @@
 
 ### Prerequisites
 
-- Go (version 1.23 or higher)
+- Go (version 1.24 or higher)
 
 ### Installation
 
